@@ -53,6 +53,8 @@ const SpaceshipGame: React.FC = () => {
 
   const [score, setScore] = useState(0);
   const [lives, setLives] = useState(3);
+  const scoreRef = useRef(0);
+  const livesRef = useRef(3);
   const [isGameOver, setIsGameOver] = useState(false);
 
   const shipRef = useRef({ x: CANVAS_W / 2 - 32, y: CANVAS_H - 110, w: 64, h: 64, speed: 6 });
@@ -75,6 +77,11 @@ const SpaceshipGame: React.FC = () => {
   const enemyMidImgRef = useRef<HTMLImageElement | null>(null);
   const enemyHardImgRef = useRef<HTMLImageElement | null>(null);
   const explosionImgRef = useRef<HTMLImageElement | null>(null);
+
+  useEffect(() => {
+    scoreRef.current = score;
+    livesRef.current = lives;
+  }, [score, lives]);
 
   useEffect(() => {
     shipImgRef.current = new Image();
@@ -227,7 +234,11 @@ const SpaceshipGame: React.FC = () => {
             en.hp -= 1;
             if (en.hp <= 0) {
               const gained = en.type === "easy" ? 10 : en.type === "mid" ? 25 : 60;
-              setScore((s) => s + gained);
+              setScore((s) => {
+                const next = s + gained;
+                scoreRef.current = next;
+                return next;
+              });
               createExplosion(en.x, en.y);
               enemiesRef.current.splice(i, 1);
             }
@@ -239,9 +250,10 @@ const SpaceshipGame: React.FC = () => {
         if (en.y > CANVAS_H) {
           enemiesRef.current.splice(i, 1);
           setLives((l) => {
-            const newL = l - 1;
-            if (newL <= 0) gameOver();
-            return newL;
+            const next = l - 1;
+            livesRef.current = next;
+            if (next <= 0) gameOver();
+            return next;
           });
         }
       }
@@ -256,21 +268,22 @@ const SpaceshipGame: React.FC = () => {
         if (ex.life <= 0) explosionsRef.current.splice(i, 1);
       }
 
-      // score and lives display
+      // score and lives display (read from refs to avoid stale values)
       ctx.font = "20px monospace";
       ctx.fillStyle = "#22d3ee";
-      ctx.fillText(`SCORE: ${score}`, 16, 30);
+      ctx.fillText(`SCORE: ${scoreRef.current}`, 16, 30);
       ctx.fillStyle = "#f87171";
-      ctx.fillText(`LIVES: ${lives}`, CANVAS_W - 120, 30);
+      ctx.fillText(`LIVES: ${livesRef.current}`, CANVAS_W - 120, 30);
 
       // ship collision
       for (const en of enemiesRef.current) {
         if (detectCollision(en, ship)) {
           createExplosion(ship.x, ship.y);
           setLives((l) => {
-            const newL = l - 1;
-            if (newL <= 0) gameOver();
-            return newL;
+            const next = l - 1;
+            livesRef.current = next;
+            if (next <= 0) gameOver();
+            return next;
           });
           enemiesRef.current = enemiesRef.current.filter((e) => e.id !== en.id);
           break;
