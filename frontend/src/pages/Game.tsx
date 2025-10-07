@@ -1,167 +1,313 @@
-import { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import Nav from "../components/Nav";
-import useKeys from "../hooks/useKeys";
 
-type Vector = { x: number; y: number; };
-type Bullet = Vector & { v: number; r: number; };
-type Enemy = Vector & { r: number; alive: boolean; vx: number; };
+import shipImg from "../assets/spaceship-fighter-removebg-preview.png";
+import bulletImg from "../assets/red-laser-removebg-preview.png";
+import enemyEasyImg from "../assets/enemyimages-removebg-preview.png";
+import enemyMidImg from "../assets/HardEnemy.png";
+import enemyHardImg from "../assets/HardestEnemy.png";
+import explosionImg from "../assets/Explosion.png";
 
-export default function Game() {
-  const bgRef = useRef<HTMLCanvasElement>(null);
-  const mainRef = useRef<HTMLCanvasElement>(null);
-  const shipRef = useRef<HTMLCanvasElement>(null);
-  const keys = useKeys();
+import shootSoundFile from "../assets/laser.wav";
+import explosionSoundFile from "../assets/expl3.wav";
+import powerupSoundFile from "../assets/pew.wav";
+import gameOverSoundFile from "../assets/tgfcoder-FrozenJam-SeamlessLoop.ogg";
+
+type EnemyType = "easy" | "mid" | "hard";
+
+interface Enemy {
+  id: number;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  hp: number;
+  speed: number;
+  type: EnemyType;
+}
+
+interface Bullet {
+  id: number;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  speed: number;
+}
+
+interface Explosion {
+  x: number;
+  y: number;
+  life: number;
+}
+
+const CANVAS_W = 700;
+const CANVAS_H = 520;
+
+let enemyIdSequence = 1;
+let bulletIdSequence = 1;
+
+const SpaceshipGame: React.FC = () => {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const navigate = useNavigate();
 
+  const [score, setScore] = useState(0);
+  const [lives, setLives] = useState(3);
+  const [isGameOver, setIsGameOver] = useState(false);
+
+  const shipRef = useRef({ x: CANVAS_W / 2 - 32, y: CANVAS_H - 110, w: 64, h: 64, speed: 6 });
+  const bulletsRef = useRef<Bullet[]>([]);
+  const enemiesRef = useRef<Enemy[]>([]);
+  const explosionsRef = useRef<Explosion[]>([]);
+  const lastShotRef = useRef(0);
+  const runningRef = useRef(true);
+  const startTimeRef = useRef<number | null>(null);
+
+  const shootSound = new Audio(shootSoundFile);
+  const explosionSound = new Audio(explosionSoundFile);
+  const powerupSound = new Audio(powerupSoundFile);
+  const gameOverSound = new Audio(gameOverSoundFile);
+
+  // image refs
+  const shipImgRef = useRef<HTMLImageElement | null>(null);
+  const bulletImgRef = useRef<HTMLImageElement | null>(null);
+  const enemyEasyImgRef = useRef<HTMLImageElement | null>(null);
+  const enemyMidImgRef = useRef<HTMLImageElement | null>(null);
+  const enemyHardImgRef = useRef<HTMLImageElement | null>(null);
+  const explosionImgRef = useRef<HTMLImageElement | null>(null);
+
   useEffect(() => {
-    const bg = bgRef.current!, main = mainRef.current!, ship = shipRef.current!;
-    const bctx = bg.getContext("2d")!, mctx = main.getContext("2d")!, sctx = ship.getContext("2d")!;
-    const W = 900, H = 560;
-    [bg, main, ship].forEach(c => { c.width = W; c.height = H; });
+    shipImgRef.current = new Image();
+    shipImgRef.current.src = shipImg;
+    bulletImgRef.current = new Image();
+    bulletImgRef.current.src = bulletImg;
+    enemyEasyImgRef.current = new Image();
+    enemyEasyImgRef.current.src = enemyEasyImg;
+    enemyMidImgRef.current = new Image();
+    enemyMidImgRef.current.src = enemyMidImg;
+    enemyHardImgRef.current = new Image();
+    enemyHardImgRef.current.src = enemyHardImg;
+    explosionImgRef.current = new Image();
+    explosionImgRef.current.src = explosionImg;
+  }, []);
 
-    // Game State
-    const player: Vector & { r: number; cd: number } = { x: W/2, y: H-70, r: 16, cd: 0 };
-    const bullets: Bullet[] = [];
-    const enemies: Enemy[] = [];
-    let frame = 0, running = true, starOffset = 0;
+  useEffect(() => {
+    const canvas = canvasRef.current!;
+    const ctx = canvas.getContext("2d")!;
+    let raf = 0;
 
-    // Wave: grid of UFOs
-    const cols = 8, rows = 3, gapX = 90, gapY = 70, startX = 120, startY = 80;
-    for (let r = 0; r < rows; r++) {
-      for (let c = 0; c < cols; c++) {
-        enemies.push({ x: startX + c * gapX, y: startY + r * gapY, r: 20, alive: true, vx: 1.2 });
+    const stars = Array.from({ length: 80 }, () => ({
+      x: Math.random() * CANVAS_W,
+      y: Math.random() * CANVAS_H,
+      size: Math.random() * 2 + 0.5,
+      speed: Math.random() * 0.6 + 0.2,
+    }));
+
+    const keysDown: Record<string, boolean> = {};
+    const onKeyDown = (e: KeyboardEvent) => {
+      keysDown[e.code] = true;
+      if (e.code === "Space") fireBullet();
+    };
+    const onKeyUp = (e: KeyboardEvent) => (keysDown[e.code] = false);
+
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keyup", onKeyUp);
+
+
+    const spawnEnemy = () => {
+      const p = Math.random();
+      let type: EnemyType = "easy";
+      if (p < 0.6) type = "easy";
+      else if (p < 0.9) type = "mid";
+      else type = "hard";
+
+      let speed = 1.3;
+      let hp = 1;
+      let w = 48;
+      let h = 48;
+
+      if (type === "easy") {
+        speed = 1.3 * 1.5;
+        hp = 1;
       }
-    }
-
-    // Background starfield
-    function drawBackground() {
-      bctx.clearRect(0,0,W,H);
-      starOffset += 1.2;
-      bctx.fillStyle = "rgba(255,255,255,.8)";
-      for (let i=0;i<120;i++){
-        const x = (i*73 % W), y = ((i*131 + starOffset) % H);
-        const s = i % 7 === 0 ? 2 : 1;
-        bctx.globalAlpha = i % 9 === 0 ? 0.5 : 0.25;
-        bctx.fillRect(x,y,s,s);
+      if (type === "mid") {
+        speed = 2.1 * 1.5;
+        hp = 2;
       }
-      bctx.globalAlpha = 1;
-    }
+      if (type === "hard") {
+        speed = 3.0 * 1.5;
+        hp = 4;
+      }
 
-    function drawShip() {
-      sctx.clearRect(0,0,W,H);
-      // simple triangle ship
-      sctx.save();
-      sctx.translate(player.x, player.y);
-      sctx.fillStyle = "oklch(0.76 0.20 240)"; // neon.blue
-      sctx.beginPath();
-      sctx.moveTo(0, -player.r);
-      sctx.lineTo(player.r*0.8, player.r);
-      sctx.lineTo(-player.r*0.8, player.r);
-      sctx.closePath();
-      sctx.fill();
+      const x = Math.random() * (CANVAS_W - w);
+      const y = -h - Math.random() * 100;
+      enemiesRef.current.push({ id: enemyIdSequence++, x, y, w, h, hp, speed, type });
+    };
 
-      // thrusters
-      sctx.fillStyle = "oklch(0.82 0.18 95)";
-      sctx.fillRect(-4, player.r, 3, 10);
-      sctx.fillRect(1,  player.r, 3, 12);
-      sctx.restore();
-    }
+    const fireBullet = () => {
+      const now = performance.now();
+      if (now - lastShotRef.current < 180) return;
+      lastShotRef.current = now;
 
-    function drawMain() {
-      mctx.clearRect(0,0,W,H);
-      // bullets
-      mctx.fillStyle = "oklch(0.82 0.13 220)";
-      bullets.forEach(b => mctx.fillRect(b.x-2, b.y-10, 4, 12));
-
-      // enemies
-      enemies.forEach(e => {
-        if (!e.alive) return;
-        mctx.save();
-        mctx.translate(e.x, e.y);
-        mctx.fillStyle = "oklch(0.62 0.23 304)";
-        mctx.beginPath();
-        mctx.arc(0,0,e.r,Math.PI,0);
-        mctx.lineTo(e.r*0.8, e.r*0.3);
-        mctx.arc(0, e.r*0.3, e.r*0.8, 0, Math.PI, true);
-        mctx.closePath();
-        mctx.fill();
-        mctx.restore();
+      const ship = shipRef.current;
+      bulletsRef.current.push({
+        id: bulletIdSequence++,
+        x: ship.x + ship.w / 2 - 6,
+        y: ship.y,
+        w: 12,
+        h: 20,
+        speed: 10,
       });
-    }
+      shootSound.currentTime = 0;
+      shootSound.play();
+    };
+    canvas.addEventListener("click", fireBullet);
 
-    function update(dt:number) {
-      frame++;
-      // player input
-      const speed = 320 * dt;
-      if (keys.current["arrowleft"] || keys.current["a"]) player.x -= speed;
-      if (keys.current["arrowright"] || keys.current["d"]) player.x += speed;
-      player.x = Math.max(30, Math.min(W-30, player.x));
+    const detectCollision = (a: any, b: any) =>
+      a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
 
-      // shooting
-      player.cd -= dt;
-      if ((keys.current[" "] || keys.current["space"]) && player.cd <= 0) {
-        bullets.push({ x: player.x, y: player.y - player.r, v: 480, r: 4 });
-        player.cd = 0.2;
+    const createExplosion = (x: number, y: number) => {
+      explosionsRef.current.push({ x, y, life: 18 });
+      explosionSound.currentTime = 0;
+      explosionSound.play();
+    };
+
+    const loop = (t: number) => {
+      if (!startTimeRef.current) startTimeRef.current = t;
+      if (!runningRef.current) return;
+
+      // move background
+      for (const s of stars) {
+        s.y += s.speed;
+        if (s.y > CANVAS_H) s.y = 0;
       }
 
-      // bullets move
-      bullets.forEach(b => b.y -= b.v * dt);
-      // enemies sway + descend over time
-      enemies.forEach((e, i) => {
-        if (!e.alive) return;
-        e.x += Math.sin((frame+i)*0.02) * 0.8 + e.vx;
-        if (frame % 240 === 0) e.y += 12;
-      });
+      const ship = shipRef.current;
+      if (keysDown["ArrowLeft"] || keysDown["KeyA"]) ship.x = Math.max(0, ship.x - ship.speed);
+      if (keysDown["ArrowRight"] || keysDown["KeyD"]) ship.x = Math.min(CANVAS_W - ship.w, ship.x + ship.speed);
+      if (keysDown["ArrowUp"] || keysDown["KeyW"]) ship.y = Math.max(0, ship.y - ship.speed);
+      if (keysDown["ArrowDown"] || keysDown["KeyS"]) ship.y = Math.min(CANVAS_H - ship.h, ship.y + ship.speed);
 
-      // collisions
-      bullets.forEach(b => {
-        enemies.forEach(e => {
-          if (!e.alive) return;
-          const dx = e.x - b.x, dy = e.y - b.y;
-          if (dx*dx + dy*dy <= (e.r+6)*(e.r+6)) {
-            e.alive = false;
-            b.y = -9999;
+      // background
+      const gradient = ctx.createLinearGradient(0, 0, 0, CANVAS_H);
+      gradient.addColorStop(0, "#030712");
+      gradient.addColorStop(1, "#0f172a");
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+
+      ctx.fillStyle = "#22d3ee";
+      for (const s of stars) ctx.fillRect(s.x, s.y, s.size, s.size);
+
+      if (shipImgRef.current?.complete) ctx.drawImage(shipImgRef.current, ship.x, ship.y, ship.w, ship.h);
+
+      // update bullets
+      for (let i = bulletsRef.current.length - 1; i >= 0; i--) {
+        const b = bulletsRef.current[i];
+        b.y -= b.speed;
+        ctx.drawImage(bulletImgRef.current!, b.x, b.y, b.w, b.h);
+        if (b.y + b.h < 0) bulletsRef.current.splice(i, 1);
+      }
+
+      // spawn enemies
+      if (Math.random() < 0.03) spawnEnemy();
+
+      // enemies update
+      for (let i = enemiesRef.current.length - 1; i >= 0; i--) {
+        const en = enemiesRef.current[i];
+        en.y += en.speed;
+        const img =
+          en.type === "easy" ? enemyEasyImgRef.current : en.type === "mid" ? enemyMidImgRef.current : enemyHardImgRef.current;
+        ctx.drawImage(img!, en.x, en.y, en.w, en.h);
+
+        // collision with bullets
+        for (let j = bulletsRef.current.length - 1; j >= 0; j--) {
+          const b = bulletsRef.current[j];
+          if (detectCollision(en, b)) {
+            bulletsRef.current.splice(j, 1);
+            en.hp -= 1;
+            if (en.hp <= 0) {
+              const gained = en.type === "easy" ? 10 : en.type === "mid" ? 25 : 60;
+              setScore((s) => s + gained);
+              createExplosion(en.x, en.y);
+              enemiesRef.current.splice(i, 1);
+            }
+            break;
           }
-        });
-      });
+        }
 
-      // win condition
-      if (enemies.every(e => !e.alive)) {
-        running = false;
-        setTimeout(() => navigate("/access"), 500);
+        // missed enemy
+        if (en.y > CANVAS_H) {
+          enemiesRef.current.splice(i, 1);
+          setLives((l) => {
+            const newL = l - 1;
+            if (newL <= 0) gameOver();
+            return newL;
+          });
+        }
       }
-    }
 
-    let last = performance.now();
-    function loop(now:number){
-      const dt = Math.min(0.033, (now-last)/1000);
-      last = now;
-      if (!running) return;
-      update(dt);
-      drawBackground();
-      drawMain();
-      drawShip();
-      requestAnimationFrame(loop);
-    }
-    requestAnimationFrame(loop);
+      // explosions
+      for (let i = explosionsRef.current.length - 1; i >= 0; i--) {
+        const ex = explosionsRef.current[i];
+        ex.life -= 1;
+        ctx.globalAlpha = ex.life / 18;
+        ctx.drawImage(explosionImgRef.current!, ex.x - 25, ex.y - 25, 50, 50);
+        ctx.globalAlpha = 1;
+        if (ex.life <= 0) explosionsRef.current.splice(i, 1);
+      }
 
-    return () => { running = false; };
-  }, [navigate]);
+      // score and lives display
+      ctx.font = "20px monospace";
+      ctx.fillStyle = "#22d3ee";
+      ctx.fillText(`SCORE: ${score}`, 16, 30);
+      ctx.fillStyle = "#f87171";
+      ctx.fillText(`LIVES: ${lives}`, CANVAS_W - 120, 30);
+
+      // ship collision
+      for (const en of enemiesRef.current) {
+        if (detectCollision(en, ship)) {
+          createExplosion(ship.x, ship.y);
+          setLives((l) => {
+            const newL = l - 1;
+            if (newL <= 0) gameOver();
+            return newL;
+          });
+          enemiesRef.current = enemiesRef.current.filter((e) => e.id !== en.id);
+          break;
+        }
+      }
+
+      raf = requestAnimationFrame(loop);
+    };
+
+    runningRef.current = true;
+    raf = requestAnimationFrame(loop);
+
+    const gameOver = () => {
+      runningRef.current = false;
+      setIsGameOver(true);
+      gameOverSound.play();
+      setTimeout(() => navigate("/access"), 2500);
+    };
+
+    return () => {
+      runningRef.current = false;
+      cancelAnimationFrame(raf);
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
+      canvas.removeEventListener("click", fireBullet);
+    };
+  }, []);
 
   return (
-    <div className="min-h-dvh">
-      <Nav />
-      <main className="mx-auto max-w-6xl px-4 py-8">
-        <div className="mb-4 text-white/70">
-          Move: ← → or A/D • Shoot: Space
-        </div>
-        <div className="relative w-full overflow-hidden rounded-xl border border-white/10 bg-space-900">
-          <canvas ref={bgRef} className="block w-full" />
-          <canvas ref={mainRef} className="absolute left-0 top-0 w-full" />
-          <canvas ref={shipRef} className="absolute left-0 top-0 w-full" />
-        </div>
-      </main>
+    <div className="flex flex-col items-center justify-center min-h-screen bg-[#020617] text-white">
+      <h1 className="text-3xl mb-3 text-cyan-400 font-mono">🚀 GEN AI ARCADE — Spaceship Destruction</h1>
+      <canvas ref={canvasRef} width={CANVAS_W} height={CANVAS_H} className="border border-cyan-700 rounded-xl shadow-lg" />
+      <p className="text-sm text-slate-300 mt-3">Use Arrow keys / WASD to move, Space to shoot</p>
+      <p className="text-xs text-slate-400">Score: {score} | Lives: {lives}</p>
+      {isGameOver && <p className="mt-3 text-rose-400 text-xl font-bold animate-pulse">GAME OVER</p>}
     </div>
   );
-}
+};
+
+export default SpaceshipGame;

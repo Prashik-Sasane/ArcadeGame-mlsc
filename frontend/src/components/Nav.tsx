@@ -33,7 +33,7 @@ export default function Nav() {
   return (
     <header className="sticky top-0 z-50 border-b border-[#2EC1FF]/10 bg-[#070A14]/95 backdrop-blur-lg">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4">
-        {/* Brand */}
+       
         <Link to="/" className="group flex items-center gap-3">
           <span className="relative grid h-7 w-7 place-items-center">
             <span className="absolute inset-0 rounded-full bg-[#58AEF7]/35 blur-md" />
@@ -44,17 +44,17 @@ export default function Nav() {
           </span>
         </Link>
 
-        {/* Center tabs */}
+      
         <nav className="hidden items-center gap-1 md:flex mr-16">
           <NavLink to="/" label="Home" />
           <NavLink to="/game" label="Play" />
           <NavLink to="/access" label="Access" />
         </nav>
 
-        {/* Actions */}
+        
         <div className="flex items-center gap-2">
           <a
-            href="https://forms.gle/your-form-id"
+            href="https://forms.gle/o2WQ6fdcZ7dtkgcWA"
             target="_blank"
             rel="noreferrer"
             className="group relative overflow-hidden rounded-2xl border-2 border-[#2EC1FF]/60 bg-gradient-to-b from-[#58AEF7] to-[#2EC1FF]/90 px-4 py-2 text-white font-semibold shadow-[0_0_16px_0_#58AEF7] transition hover:brightness-110"
@@ -63,7 +63,7 @@ export default function Nav() {
             <span className="pointer-events-none absolute inset-0 -translate-x-full bg-white/30 mix-blend-overlay group-hover:translate-x-0 transition-transform duration-500" />
           </a>
 
-          {/* Mobile menu (optional) */}
+         
           <button
             aria-label="Menu"
             className="md:hidden inline-flex h-9 w-9 items-center justify-center rounded-md border-2 border-[#2EC1FF]/40 bg-[#101931]/60 text-[#80B6FF] hover:text-[#2EC1FF] transition"

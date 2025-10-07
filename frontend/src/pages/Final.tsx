@@ -20,7 +20,7 @@ export default function Final() {
 
         <div className="grid gap-6 text-left">
           <a
-            href="https://chat.whatsapp.com/your-group"
+            href=" https://chat.whatsapp.com/KfqHxXxOxjI26FsZf7SMmQ?mode=ems_copy_c"
             className="block rounded-xl border-2 border-[#7FFF00]/50 bg-[#101931]/90 p-6 text-[#7FFF00] hover:bg-[#1a2b40] transition"
             target="_blank"
             rel="noreferrer"
@@ -28,7 +28,7 @@ export default function Final() {
             ✅ WhatsApp Group
           </a>
           <a
-            href="https://forms.gle/your-form-id"
+            href="https://forms.gle/o2WQ6fdcZ7dtkgcWA"
             className="block rounded-xl border-2 border-[#FFD700]/40 bg-[#101931]/90 p-6 text-[#FFD700]  hover:bg-[#1a2b40] transition"
             target="_blank"
             rel="noreferrer"
@@ -40,7 +40,7 @@ export default function Final() {
             <div className="flex gap-5 justify-center">
               <a
                 className="underline text-[#80B6FF] hover:text-[#2EC1FF] transition"
-                href="https://www.linkedin.com/company/mlsc-vit-pune"
+                href="https://www.linkedin.com/company/mlscvitpune/?originalSubdomain=in"
                 target="_blank"
                 rel="noreferrer"
               >
@@ -48,7 +48,7 @@ export default function Final() {
               </a>
               <a
                 className="underline text-[#80B6FF] hover:text-[#2EC1FF] transition"
-                href="https://www.instagram.com/mlsc.vitpune"
+                href="https://www.instagram.com/mlscvitpune/?hl=en"
                 target="_blank"
                 rel="noreferrer"
               >
