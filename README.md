@@ -1,84 +1,63 @@
 # ArcadeGame-mlsc
 
-Overview
-GEN AI ARCADE is an interactive event landing page and arcade-style game web application developed for the MLSC VIT Pune event. The app features a futuristic AI-themed design using neon blues and dark cosmic background colors, integrating a classic spaceship shooter game experience. It is built with React, TypeScript, React Router DOM, and Tailwind CSS for a modern, responsive, and visually immersive user experience.
+A full‑stack arcade mini‑game built with a React + Vite frontend and an Express + MongoDB backend. New contributors can use this README to get the whole project running end‑to‑end in a few minutes.
 
-Features
-Landing Page: Showcases event details with futuristic neon styling, featuring speaker info, event highlights, date/time, and registration button linking to Google Forms.
+### Monorepo layout
 
-Arcade Game: "Spaceship Destruction" arcade game built with HTML5 Canvas and React hooks, where the player controls a spaceship to shoot alien invaders.
+```
+ArcadeGame-mlsc/
+  Backend/        # Express API + MongoDB models and routes
+  frontend/       # React + Vite app with the game and pages
+```
 
-Final Page: Gamified access unlock page listing official WhatsApp group, registration form, and MLSC social media links in a neon style.
+### Prerequisites
 
-Consistent Neon Theme: Dark navy background with neon blue, cyan, gold, and purple accents to provide a unified arcade vibe.
+- Node.js 18+ and npm
+- MongoDB running locally (defaults to `mongodb://localhost:27017/arcade`)
 
-Responsive Design: Works across desktop and mobile viewports with fluid grid and flex layouts.
+### Quick start
 
-Accessible and Interactive: Includes keyboard controls, focus-visible states, hover animations, and glowing effects.
+1) Install dependencies (run once per workspace):
 
-Technologies Used
-React 18 with TypeScript
+```bash
+cd Backend && npm install
+cd ../frontend && npm install
+```
 
-React Router DOM v6 for multi-page SPA navigation
+2) Start the backend API (port 5000):
 
-Tailwind CSS (OKLCH custom color palettes for neon effects)
+```bash
+cd Backend && node app.js
+```
 
-HTML5 Canvas for game rendering
+3) Start the frontend dev server (default Vite port, typically 5173):
 
-Vite as the build tool and development server
+```bash
+cd frontend && npm run dev
+```
 
-Project Structure
-/src/pages: Contains all React page components (Landing, Game, Final, NotFound)
+4) Open the app in your browser (Vite will print the exact URL), then navigate to the game from the landing page.
 
-/src/components: Shared UI components like Nav, GlitchText, reusable UI elements
+### Backend API overview
 
-/src/hooks: Custom React hooks (e.g., keyboard input)
+- Base URL: `http://localhost:5000/api/game`
+- Endpoints:
+  - `POST /saveResult` → persist `{ username, score }` to MongoDB
+  - `GET /getResults` → fetch recent game results (sorted by newest)
 
-/src/assets: Static image assets including event poster and speaker photo
+See detailed setup and API examples in `Backend/README.md`.
 
-/src/main.tsx: Entry point with router configuration
+### Frontend overview
 
-Getting Started
-Prerequisites
-Node.js 18+
+- React + Vite app with routes for landing, game canvas, and final links page.
+- Uses assets and simple canvas rendering for the arcade gameplay.
 
-npm or yarn
+See usage, routes, and integration notes in `frontend/README.md`.
 
-Installation
-bash
-git clone https://github.com/yourusername/gen-ai-arcade.git
-cd gen-ai-arcade
+### Useful links
 
-npm install
-# or yarn install
-Development
-bash
-npm run dev
-# or yarn dev
-Open http://localhost:5173 in your browser to view the app live.
-
-Build for Production
-bash
-npm run build
-# or yarn build
-Production-ready static assets will be generated in /dist.
-
-Deployment
-Deploy the contents of /dist to any static hosting like Vercel, Netlify, GitHub Pages.
-
-Customization
-Update Google Form and WhatsApp group URLs in the config constants.
-
-Add or replace assets in /src/assets as needed.
-
-Update colors using the Tailwind CSS theme config for branding consistency.
-
-Extend game logic in /src/pages/Game.tsx with new enemies, scoring, or UI enhancements.
-
-Contributing
-Contributions are welcome! Please fork the repository and create PRs for new features, bug fixes, or improvements.
-
-License
-This project is open-source under the MIT license.
-
-© 2025 MLSC VIT Pune | GEN AI ARCADE Team
+- Backend docs: `Backend/README.md`
+- Frontend docs: `frontend/README.md`
+- Vite: `https://vite.dev`
+- Express: `https://expressjs.com/`
+- MongoDB: `https://www.mongodb.com/`
